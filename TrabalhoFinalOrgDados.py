@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-df = pd.read_csv(r'trabalhoFinal\StudentPerformanceFactors.csv')
+df = pd.read_csv(r'StudentPerformanceFactors.csv')
 
 st.header('Dashboard: Performance de estudantes')
 st.write("Este painel interativo tem como objetivo mostrar a análise feita a partir de dados obtidos no Kaggle.")
@@ -62,7 +62,9 @@ st.write("O gráfico abaixo mostra a média dos estudantes em escolas públicas 
 
 st.bar_chart(grafico_qualidade)
 
-st.write("A diferença média de pontos entre pessoas que tem acesso a Internet e pessoas que não tem acesso a Internet: 0.75 pontos no exame final. Logo, a Internet não é um grande impecílio para os estudos no contexto do dataset, uma vez que a diferença de pontos no exame final é pequena.")
+st.write("No contexto desse dataset, como podemos ver, a diferença de qualidade entre instituições de ensino públicas e instituições de ensino privada não é um fator que implica no rendimento dos alunos.")
+
+st.write(f"A diferença entre as médias dos alunos da privada e da pública é de: {round(media_privada - media_publica, 2)} pontos no exame final, uma diferença quase que irrelevante")
 
 # Há diferença de disponibilidade de recursos educacionais entre estudantes de escolas públicas e privadas?
 st.write("#### 2.2. Há diferença de disponibilidade de recursos educacionais entre estudantes de escolas públicas e privadas?")
@@ -162,3 +164,102 @@ st.bar_chart(tabela_contingencia_dif_aprend)
 
 st.write("Independentemente de o aluno ter ou não deficiência de aprendizagem, os percentuais de acesso a recursos são bem parecidos, sendo esse acesso médio para ambas as categorias.")
 
+# Rendimento dos alunos baseado na quantidade de aulas de reforço
+
+qtd_alunos_aulas_por_semana = [0, 0, 0, 0, 0, 0, 0, 0] # Quantidade de alunos que fazem x aulas de reforço por semana x[0, 8]
+soma_nota_alunos = [0, 0, 0, 0, 0, 0, 0, 0] # Soma das notas dos alunos
+
+# Conta quantos alunos e soma suas notas
+for index, row in df.iterrows():
+    match row['Tutoring_Sessions']:
+        case 0:
+            qtd_alunos_aulas_por_semana[0] += 1
+            soma_nota_alunos[0] += row['Exam_Score']
+        case 1:
+            qtd_alunos_aulas_por_semana[1] += 1
+            soma_nota_alunos[1] += row['Exam_Score']
+        case 2:
+            qtd_alunos_aulas_por_semana[2] += 1
+            soma_nota_alunos[2] += row['Exam_Score']
+        case 3:
+            qtd_alunos_aulas_por_semana[3] += 1
+            soma_nota_alunos[3] += row['Exam_Score']
+        case 4:
+            qtd_alunos_aulas_por_semana[4] += 1
+            soma_nota_alunos[4] += row['Exam_Score']
+        case 5:
+            qtd_alunos_aulas_por_semana[5] += 1
+            soma_nota_alunos[5] += row['Exam_Score']
+        case 6:
+            qtd_alunos_aulas_por_semana[6] += 1
+            soma_nota_alunos[6] += row['Exam_Score']
+        case 7:
+            qtd_alunos_aulas_por_semana[7] += 1
+            soma_nota_alunos[7] += row['Exam_Score']
+
+media_nota_alunos = [0, 0, 0, 0, 0, 0, 0, 0] # Média das notas dos alunos
+
+# Calcula a média
+for i in range(8):
+    media_nota_alunos[i] = soma_nota_alunos[i] / qtd_alunos_aulas_por_semana[i]
+
+
+data = {
+    "Categorias": ["Nenhuma", "Uma aula", "Duas aulas", "Três aulas", "Quatro aulas", "Cinco aulas", "Seis aulas", "Sete aulas"],
+    "Valores": qtd_alunos_aulas_por_semana
+}
+
+fig = pd.DataFrame(data)
+fig["Categorias"] = pd.Categorical(
+    fig["Categorias"], 
+    categories=["Nenhuma", "Uma aula", "Duas aulas", "Três aulas", "Quatro aulas", "Cinco aulas", "Seis aulas", "Sete aulas"],
+    ordered=True
+)
+
+fig = fig.set_index("Categorias")
+
+st.write("## 3.3. As aulas de roforços geram resultados no desempenho dos alunos?")
+
+st.write("O Gráfico abaixo relaciona a quantidade de alunos com a quantidade de aulas de reforço semanais frequentadas.")
+st.bar_chart(fig)
+
+
+st.write("O Gráfico abaixo mostra o impacto das aulas de reforço nas notas dos alunos.")
+
+data = {
+    "Categorias": ["Nenhuma", "Uma aula", "Duas aulas", "Três aulas", "Quatro aulas", "Cinco aulas", "Seis aulas", "Sete aulas"],
+    "Valores": media_nota_alunos
+}
+
+fig = pd.DataFrame(data)
+fig["Categorias"] = pd.Categorical(
+    fig["Categorias"], 
+    categories=["Nenhuma", "Uma aula", "Duas aulas", "Três aulas", "Quatro aulas", "Cinco aulas", "Seis aulas", "Sete aulas"],
+    ordered=True
+)
+fig = fig.set_index("Categorias")
+st.bar_chart(fig)
+
+st.write("A partir disso, podemos concluir que aulas de reforço extra fazem diferença consideravel na nota final do estudantes, sendo seis aulas o 'Número ótimo', talvez sete aulas sejam demais, pois é necessário que o estudante tenha tempo para estudar sozinho.")
+
+st.write("### 4.  Distribuição de notas no exame final")
+st.write("O gráfico abaixo mostra a distribuição de frequência de notas")
+
+data = {
+    "Notas": df["Exam_Score"]
+}
+
+notas = pd.DataFrame(data)
+
+
+# Criar o gráfico de distribuição
+fig, ax = plt.subplots(figsize=(8, 6))
+ax.hist(notas['Notas'], bins=45, color='blue', alpha=0.7)
+ax.set_title('Distribuição de Frequência de Notas')
+ax.set_xlabel('Nota')
+ax.set_ylabel('Frequência')
+
+# Mostrar o gráfico no Streamlit
+st.pyplot(fig)
+
+st.write("Vemos que nesse dataset, são muito comuns as notas entre 60-75 pontos no exame final e poquíssimas notas acima ou abaixo disso.")
