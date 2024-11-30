@@ -3,6 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.stats import gaussian_kde
+import plotly.graph_objects as go
+import plotly.express as px
+from sklearn.preprocessing import LabelEncoder
 
 df = pd.read_csv(r'StudentPerformanceFactors.csv')
 
@@ -242,6 +247,8 @@ st.bar_chart(fig)
 
 st.write("A partir disso, podemos concluir que aulas de reforço extra fazem diferença consideravel na nota final do estudantes, sendo seis aulas o 'Número ótimo', talvez sete aulas sejam demais, pois é necessário que o estudante tenha tempo para estudar sozinho.")
 
+# Distribuição de notas no exame final
+
 st.write("### 4.  Distribuição de notas no exame final")
 st.write("O gráfico abaixo mostra a distribuição de frequência de notas")
 
@@ -250,7 +257,6 @@ data = {
 }
 
 notas = pd.DataFrame(data)
-
 
 # Criar o gráfico de distribuição
 fig, ax = plt.subplots(figsize=(8, 6))
@@ -263,3 +269,340 @@ ax.set_ylabel('Frequência')
 st.pyplot(fig)
 
 st.write("Vemos que nesse dataset, são muito comuns as notas entre 60-75 pontos no exame final e poquíssimas notas acima ou abaixo disso.")
+
+# Analisando horas de estudo e seu impacto
+
+st.write("""
+         ### 5. Analisando horas de estudo e seu impacto
+         Atualmente, uma das grandes habilidades a se ter é de ser eficiente com o seu tempo ao longo do dia. Para os estudos não é diferente, então, nesse tópico, serão abordadas algumas análises sobre o seu gasto de tempo com diferentes tarefas, como o estudo ou o sono e a sua determinada eficácia.
+         """)
+
+# Introdução ao gráfico
+st.write("""
+#### 5.1 Distribuição 3D: Notas vs Horas Estudadas
+Aqui analisamos a relação entre as notas dos exames e as horas estudadas, usando um gráfico de densidade 3D interativo.
+""")
+
+# Verificar se as colunas necessárias estão presentes
+if 'Exam_Score' in df.columns and 'Hours_Studied' in df.columns:
+    # Dados relevantes
+    x = df['Exam_Score']
+    y = df['Hours_Studied']
+
+    # Gerar densidade 3D com intervalos fixos
+    xy = np.vstack([x, y])
+    kde = gaussian_kde(xy)
+    x_grid, y_grid = np.meshgrid(np.linspace(60, 75, 30),
+                                 np.linspace(10, 30, 30))
+    z_grid = kde(np.vstack([x_grid.ravel(), y_grid.ravel()])).reshape(x_grid.shape)
+
+    # Criar gráfico interativo com Plotly
+    fig = go.Figure(data=[
+        go.Surface(
+            z=z_grid,
+            x=x_grid,
+            y=y_grid,
+            colorscale="Viridis",
+            showscale=True,
+            opacity=0.9
+        )
+    ])
+
+    # Atualizar layout do gráfico
+    fig.update_layout(
+        title="Distribuição 3D da frequência de horas estudadas e notas no exame",
+        scene=dict(
+            xaxis_title="Nota no exame",
+            yaxis_title="Horas estudadas",
+            zaxis_title="Densidade",
+            zaxis=dict(visible=False)  # Ocultar o eixo Z
+        ),
+    )
+
+    # Mostrar o gráfico interativo no Streamlit
+    st.plotly_chart(fig, use_container_width=True)
+    
+st.write("Podemos ver no gráfico acima que há uma pequena melhora na nota em função da quantidade de estudo vista na frequência de pessoas que estudam mais de 22.5 horas semanais. Além disso, é perceptível que estudar mais do que a média, praticamente anula as chances de obter um resultado considerado ruim na prova")
+
+# 5.2 Distribuição 3D: Horas de sono vs Horas Estudadas
+
+st.write("""
+#### 5.2 Distribuição 3D: Horas de sono vs Horas Estudadas
+Aqui analisamos a relação entre as notas dos exames e as horas estudadas, usando um gráfico de densidade 3D interativo.
+""")
+
+# Definir as variáveis
+x = df['Sleep_Hours']
+y = df['Hours_Studied']
+
+# Estimativa de densidade de Kernel
+xy = np.vstack([x, y])
+kde = gaussian_kde(xy)
+x_grid, y_grid = np.meshgrid(np.linspace(4, 10, 6), np.linspace(10, 30, 20))
+z_grid = kde(np.vstack([x_grid.ravel(), y_grid.ravel()])).reshape(x_grid.shape)
+
+# Criar o gráfico 3D com plotly
+fig = go.Figure(data=[go.Surface(z=z_grid, x=x_grid, y=y_grid, colorscale='Viridis')])
+
+# Adicionar detalhes ao gráfico
+fig.update_layout(
+    title='Distribuição 3D da frequência de horas estudadas e horas de sono',
+    scene=dict(
+        xaxis_title='Horas de sono médio por noite',
+        yaxis_title='Horas estudadas',
+        zaxis_title='Densidade',
+    ),
+    margin=dict(l=0, r=0, b=0, t=40),
+    # Habilitar zoom interativo
+    scene_camera=dict(
+        eye=dict(x=1.25, y=1.25, z=0.75)
+    )
+)
+
+# Exibir o gráfico no Streamlit
+st.plotly_chart(fig)
+
+st.write("Pelo que pode-se observar, parece haver um pequeno trade-off entre a quantidade de horas de estudo e a quantidade de sono, podemos ver que a distribuição conjunta é um pouco mais deslocada e elevada no sentido de mais horas de sono e menos horas de estudo, sendo assim, podemos observar uma frequência em estudantes que dormem mais em estudar menos (já que sobra menos tempo aos mesmos para realizar tal). Além dessa análise podemos observar no pico do gráfico que a maioria dos estudantes estuda entre 17 e 22 horas semanais e dorme 7 horas por dia")
+
+#5.3 Analisando diferentes distribuições de notas em função do sono
+
+st.write("""
+#### 5.3 Analisando diferentes distribuições de notas em função do sono
+Aqui analisamos a relação entre as notas dos exames e as horas estudadas, usando um gráfico de densidade 3D interativo.
+""")
+
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import numpy as np
+from scipy.stats import gaussian_kde
+
+# Supondo que o DataFrame 'df' já tenha sido carregado
+# df = pd.read_csv('seu_arquivo.csv')
+
+# Dividir o dataframe por horas de sono
+df_7 = df[df['Sleep_Hours'] == 7]
+df_8 = df[df['Sleep_Hours'] == 8]
+df_4 = df[df['Sleep_Hours'] == 4]
+df_10 = df[df['Sleep_Hours'] == 10]
+
+# Função para calcular a densidade KDE
+def kde_plot_data(data, grid_points=500):
+    kde = gaussian_kde(data)
+    grid = np.linspace(data.min(), data.max(), grid_points)
+    density = kde(grid)
+    return grid, density
+
+# Calcular as densidades para cada grupo de horas de sono
+x_7, y_7 = kde_plot_data(df_7['Exam_Score'])
+x_8, y_8 = kde_plot_data(df_8['Exam_Score'])
+x_4, y_4 = kde_plot_data(df_4['Exam_Score'])
+x_10, y_10 = kde_plot_data(df_10['Exam_Score'])
+
+# Criando a figura para o Plotly
+fig = go.Figure()
+
+# Adicionando as curvas de densidade para cada grupo de horas de sono
+fig.add_trace(go.Scatter(
+    x=x_7, y=y_7, mode='lines', name='Sleep = 7 hours', line=dict(width=3)
+))
+fig.add_trace(go.Scatter(
+    x=x_8, y=y_8, mode='lines', name='Sleep = 8 hours', line=dict(width=3)
+))
+fig.add_trace(go.Scatter(
+    x=x_4, y=y_4, mode='lines', name='Sleep = 4 hours', line=dict(width=3)
+))
+fig.add_trace(go.Scatter(
+    x=x_10, y=y_10, mode='lines', name='Sleep = 10 hours', line=dict(width=3)
+))
+
+# Ajustando o layout para adicionar título, labels e permitindo zoom
+fig.update_layout(
+    title='Distribuição de Notas por Horas de Sono',
+    xaxis_title='Nota no Exame',
+    yaxis_title='Densidade',
+    hovermode='closest',
+    xaxis=dict(range=[50, 80]),
+    yaxis=dict(range=[0, 0.05]),  # Ajustar conforme necessário
+)
+
+# Exibindo o gráfico interativo no Streamlit
+st.plotly_chart(fig)
+
+st.write("Esse gráfico mostra que surpreendentemente a performance dos estudantes não varia muito em função das horas de sono já que as 4 distribuições são muito parecidas, porém gostariamos de mostrar um gráfico ainda mais interessante, que analisa as notas mais altas do dataset:")
+
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import numpy as np
+from scipy.stats import gaussian_kde
+
+# Supondo que o DataFrame 'df' já tenha sido carregado
+# df = pd.read_csv('seu_arquivo.csv')
+
+# Dividir o dataframe por horas de sono
+df_7 = df[df['Sleep_Hours'] == 7]
+df_8 = df[df['Sleep_Hours'] == 8]
+df_4 = df[df['Sleep_Hours'] == 4]
+df_10 = df[df['Sleep_Hours'] == 10]
+
+# Função para calcular a densidade KDE
+def kde_plot_data(data, grid_points=500):
+    kde = gaussian_kde(data)
+    grid = np.linspace(data.min(), data.max(), grid_points)
+    density = kde(grid)
+    return grid, density
+
+# Calcular as densidades para cada grupo de horas de sono
+x_7, y_7 = kde_plot_data(df_7['Exam_Score'])
+x_8, y_8 = kde_plot_data(df_8['Exam_Score'])
+x_4, y_4 = kde_plot_data(df_4['Exam_Score'])
+x_10, y_10 = kde_plot_data(df_10['Exam_Score'])
+
+# Criando a figura para o Plotly
+fig = go.Figure()
+
+# Adicionando as curvas de densidade para cada grupo de horas de sono
+fig.add_trace(go.Scatter(
+    x=x_7, y=y_7, mode='lines', name='Sleep = 7 hours', line=dict(width=3)
+))
+fig.add_trace(go.Scatter(
+    x=x_8, y=y_8, mode='lines', name='Sleep = 8 hours', line=dict(width=3)
+))
+fig.add_trace(go.Scatter(
+    x=x_4, y=y_4, mode='lines', name='Sleep = 4 hours', line=dict(width=3)
+))
+fig.add_trace(go.Scatter(
+    x=x_10, y=y_10, mode='lines', name='Sleep = 10 hours', line=dict(width=3)
+))
+
+# Ajustando o layout para adicionar título, labels e permitindo zoom
+fig.update_layout(
+    title='Distribuição de Notas por Horas de Sono',
+    xaxis_title='Nota no Exame',
+    yaxis_title='Densidade',
+    hovermode='closest',
+    xaxis=dict(range=[80, 100]),  # Definindo o intervalo do eixo X entre 80 e 100
+    yaxis=dict(range=[0, 0.01]),  # Definindo o intervalo do eixo Y
+    template="plotly_white"  # Usando um tema claro
+)
+
+# Exibindo o gráfico interativo no Streamlit
+st.plotly_chart(fig)
+
+st.write("Podemos ver aqui que vários estudantes que dormem 4 horas por noite acabaram com nota 100% (isso é claro, apenas 0.2% de todas as amostras do dataset, sendo basicamente outliers) mas ainda sim isso mostra que esses estudantes provavelmente são do tipo de estudar noites e madrugadas na véspera da prova, a espera de um bom resultado...")
+
+# 6. Matriz Correlacional
+
+st.write("""
+         ### 6. Matriz Correlacional
+         Com a demonstração dessa matriz, temos o objetivo de entender quais são os fatores que estão mais relacionados com o bom resultado em exames desse data set.
+         """)
+
+# Definir o estilo dark
+plt.style.use('dark_background')  # Definindo o estilo de fundo escuro
+
+# Colunas categóricas
+categorical_columns = df.select_dtypes(include=['object']).columns
+
+# Codificando variáveis categóricas
+df_encoded = pd.get_dummies(df, columns=categorical_columns, drop_first=True)
+
+# Aplicando Label Encoding para variáveis categóricas
+label_encoder = LabelEncoder()  # classe para converter strings em categorias numéricas
+for col in categorical_columns:
+    df[col] = label_encoder.fit_transform(df[col])
+
+# Matriz de correlação
+correlation_matrix = df.corr()
+
+# Plotando a matriz de correlação com fundo escuro
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f', 
+            annot_kws={'size': 8},  # Reduzir o tamanho da fonte
+            linewidths=0.5,  # Aumentar o espaçamento entre as células
+            cbar_kws={'label': 'Correlacao'}, 
+            vmin=-0.1, vmax=1)  # Ajustando os limites para -0.1 até 1
+
+plt.title("Matriz Correlacional", fontsize=16, color='white')  # Título em cor branca
+plt.xlabel("Variáveis", fontsize=12, color='white')  # Rótulo do eixo X em branco
+plt.ylabel("Variáveis", fontsize=12, color='white')  # Rótulo do eixo Y em branco
+
+# Exibir o gráfico no Streamlit
+st.pyplot(plt)
+
+st.write("Podemos ver que os parâmetros mais relevantes para a nota final são: Presença nas aulas e Horas estudadas, já tinhamos atestado isso para horas estudadas em um gráfico anterior, mas não tinhamos feito isso para a presença, vamos plotar algum gráfico referente a isso no próximo tópico")
+
+# 7. Distribuição Conjunta de Presença nas Aulas e Nota no Exame Final
+
+st.write("### 7. Distribuição Conjunta de Presença nas Aulas e Nota no Exame Final")
+
+import pandas as pd
+import numpy as np
+import plotly.graph_objs as go
+import plotly.express as px
+import streamlit as st
+from scipy.stats import gaussian_kde
+
+# Exemplo de dataframe df, substitua pelo seu dataframe carregado
+# df = pd.read_csv('seu_arquivo.csv') # Descomente e substitua para carregar seu arquivo
+
+# Vamos definir as variáveis para o gráfico
+x = df['Exam_Score']
+y = df['Attendance']
+
+# Calculando a densidade usando gaussian_kde
+xy = np.vstack([x, y])
+kde = gaussian_kde(xy)
+x_grid, y_grid = np.meshgrid(np.linspace(60, 75, 30), np.linspace(55, 100, 50))
+z_grid = kde(np.vstack([x_grid.ravel(), y_grid.ravel()])).reshape(x_grid.shape)
+
+# Criando uma visualização 3D interativa com Plotly
+fig = go.Figure(data=[go.Surface(
+    z=z_grid,
+    x=x_grid,
+    y=y_grid,
+    colorscale='Viridis',
+    colorbar=dict(title='Densidade'),
+)])
+
+# Configuração do layout para o gráfico 3D
+fig.update_layout(
+    title='Distribuição 3D da Frequência de Presença e Notas no Exame',
+    scene=dict(
+        xaxis_title='Nota no Exame',
+        yaxis_title='Presença nas Aulas',
+        zaxis_title='Densidade',
+        camera_eye=dict(x=2, y=2, z=2),  # Posição inicial da câmera para visualização
+    ),
+    margin=dict(l=0, r=0, b=0, t=50),
+    width=800, height=600
+)
+
+# Exibir o gráfico interativo no Streamlit
+st.plotly_chart(fig)
+
+st.write("E depois de olhar o gráfico de cima podemos ver uma clara melhora na nota de acordo com a presença nas aulas:")
+st.markdown(""" 
+- Alunos que vão a 60%-65% das aulas tendem a ter uma nota entre 62-64 pontos
+- Alunos que vão a 95%-100% das aulas tendem a ter uma nota entre 68-72 pontos          
+            """)
+st.write("Apenas ir a mais aulas (se estivermos falando de 1 semestre por exemplo, ir a mais 2 ou 3 aulas) pode ter render de 4 a 10 pontos a mais no exame final.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
